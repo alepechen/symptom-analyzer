@@ -11,11 +11,14 @@ app = FastAPI()
 with open("data/label_map.json", "r") as f:
     label_map = json.load(f)
 
-@lru_cache()
-def get_model():
-    model_name = "shanover/symps_disease_bert_v3_c41"
-    return pipeline("text-classification", model=model_name)
+model = None
 
+@app.on_event("startup")
+def load_model():
+    global model
+    if model is None:
+        model_name = "shanover/symps_disease_bert_v3_c41"
+        model = pipeline("text-classification", model=model_name)
 
 # Async-compatible inference using asyncio.to_thread
 async def run_prediction(model, symptoms: str):
@@ -33,8 +36,10 @@ def preprocess_symptoms(raw_symptoms: str, severity: str) -> str:
 
 
 @app.post("/predict/")
-async def predict_diagnosis(request: SymptomsRequest, model=Depends(get_model)):
+async def predict_diagnosis(request: SymptomsRequest):
     try:
+        if model is None:
+            raise HTTPException(status_code=500, detail="Model not loaded")
         clean_text = preprocess_symptoms(request.symptoms, request.severity)
         prediction = await run_prediction(model, clean_text)
         label = prediction[0]['label']
