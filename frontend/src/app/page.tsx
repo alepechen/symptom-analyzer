@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, ReactNode } from 'react';
+import React, { useState} from 'react';
 import { Symptom, allSymptoms, bodyRegions, symptomCategories } from '@/data/symptoms';
 
 type Severity = 'mild' | 'moderate' | 'severe'
@@ -13,10 +13,8 @@ interface SymptomEntry {
 };
 
 interface Analysis {
-  possibleConditions: Array<{
-    diagnosis: string;
-    confidence: number;
-    }>;
+  diagnosis: string;
+  confidence: number;
 }
 export default function Home() {
   const [symptoms, setSymptoms] = useState<string[]>([]);
@@ -85,6 +83,28 @@ export default function Home() {
     setSelectedCategory(null);
     setSearchQuery('');
   };
+  const analyzeSymptoms = async () => {
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/predict/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selectedSymptomEntries)
+      });
+  
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data:Analysis = await response.json();
+      setAnalysis(data)
+      setStep('results')
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
   const renderBodyRegionSelection = () => (
     <div className="space-y-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -122,8 +142,7 @@ export default function Home() {
               </button>
             ))}
           </div>
-        </div>
-        
+        </div>    
         <div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
             Search symptoms
@@ -169,9 +188,8 @@ export default function Home() {
       <div className="flex items-center space-x-2">
         <button
           onClick={() => setStep('region')}
-          className="inline-flex items-center text-primary-600 hover:text-primary-500"
+          className="inline-flex items-center text-blue-800"
         >
-        {/*   <ArrowLeftIcon className="h-4 w-4 mr-1" /> */}
           Back
         </button>
         
@@ -232,18 +250,16 @@ export default function Home() {
       </div>
       
       <button
-        onClick={()=>{}}
+        onClick={analyzeSymptoms}
         disabled={symptoms.length === 0 || isAnalyzing}
-        className="w-full mt-6 flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full mt-6 flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-slate-900 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isAnalyzing ? (
           <>
-            {/* <ArrowPathIcon className="animate-spin -ml-1 mr-3 h-5 w-5" /> */}
             Analyzing...
           </>
         ) : (
           <>
-           {/*  <MagnifyingGlassIcon className="-ml-1 mr-3 h-5 w-5" /> */}
             Analyze Symptoms
           </>
         )}
@@ -259,9 +275,8 @@ export default function Home() {
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setStep('symptoms')}
-            className="inline-flex items-center text-primary-600 hover:text-primary-500"
+            className="inline-flex items-center text-blue-800"
           >
-         {/*    <ArrowLeftIcon className="h-4 w-4 mr-1" /> */}
             Back
           </button>
           
@@ -326,9 +341,8 @@ export default function Home() {
           <div className="mt-6 flex justify-end">
             <button
               onClick={handleConfirmSymptomDetails}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
-              {/* <PlusCircleIcon className="-ml-1 mr-2 h-5 w-5" /> */}
               Add Symptom
             </button>
           </div>
@@ -336,7 +350,80 @@ export default function Home() {
       </div>
     );
   };
-
+  const renderAnalysisResults = () => {
+    if (!analysis) return null;
+    
+    return (
+      <div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setStep('symptoms')}
+            className="inline-flex items-center text-blue-800"
+          >
+            Back to symptoms
+          </button>
+          
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            Analysis Results
+          </h3>
+        </div>
+        
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Disclaimer
+              </h3>
+              <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                This analysis is for informational purposes only and does not constitute medical advice. 
+              </p>
+            </div>
+          </div>
+        </div>
+       
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Possible Conditions
+          </h3>
+          <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-base font-medium text-gray-900 dark:text-white">
+                    {analysis.diagnosis}
+                  </h4>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-1">
+                  <div
+                    className={`h-2 rounded-full ${
+                      analysis.confidence > 0.6
+                        ? 'bg-green-600'
+                        : analysis.confidence > 0.3
+                        ? 'bg-yellow-500'
+                        : 'bg-gray-500'
+                    }`}
+                    style={{ width: `${analysis.confidence * 100}%` }}
+                  />
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {Math.round(analysis.confidence * 100)}% probability
+                </span>    
+              </div>
+          </div>        
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+            Need more help?
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <a 
+              href="/appointments" 
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-900"
+            >
+              Book an Appointment
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  };
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -344,11 +431,10 @@ export default function Home() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
             AI Symptom Checker
           </h2>
-
           {step === 'region' && renderBodyRegionSelection()}
           {step === 'symptoms' && renderSymptomSelection()}
           {step === 'details' && renderSymptomDetails()}
-          {/* {step === 'results' && renderAnalysisResults()} */}
+          {step === 'results' && renderAnalysisResults()}
         </div>
       </main>
     </div>

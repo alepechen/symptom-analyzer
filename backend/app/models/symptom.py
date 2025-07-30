@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
 class SymptomsRequest(BaseModel):
-    symptoms: str
+    symptom: str
     severity: str  # e.g., "mild", "moderate", "severe"
+    duration: str
