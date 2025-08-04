@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useState} from 'react';
+import React, { useState, useEffect} from 'react';
 import { Symptom, allSymptoms, bodyRegions, symptomCategories } from '@/data/symptoms';
+import { useRouter } from 'next/navigation';
+import { useAuth} from '@/features/auth/authContext';
 
 type Severity = 'mild' | 'moderate' | 'severe'
 type Duration = 'Today' | 'Few days' | '1-2 weeks' | 'Longer'
@@ -28,6 +30,14 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [step, setStep] = useState<'region' | 'symptoms' | 'details' | 'results'>('region');
+  const router = useRouter();
+  const { token } = useAuth();
+  
+  useEffect(() => {
+    if (!token) {
+      router.push('/login')
+    }
+  }, [token])
 
   const filteredSymptoms = allSymptoms.filter(symptom => {
     if (searchQuery) {
@@ -88,7 +98,10 @@ export default function Home() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/predict/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: "include",
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`, },
         body: JSON.stringify(selectedSymptomEntries)
       });
   
