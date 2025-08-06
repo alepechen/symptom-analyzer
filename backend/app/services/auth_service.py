@@ -9,7 +9,8 @@ def authenticate_user(session: Session, email: str, password: str):
     return user
 
 def generate_token_for_user(user):
-    return create_access_token(data={"sub": user.email})
+    return create_access_token(data={"sub": user.email,"id": user.id,
+        "name": user.name})
 
 def register_user(session: Session, name: str, email: str, password: str):
     try:

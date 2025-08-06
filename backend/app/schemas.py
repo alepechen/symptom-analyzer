@@ -29,6 +29,7 @@ class Token(BaseModel):
     token_type: str
 
 class Doctor(BaseModel):
+    id: int
     name: str
     available_days: List[str]  # e.g., ["Monday", "Wednesday", "Friday"]
     working_hours: Dict[str, str]  # e.g., {"start": "09:00", "end": "17:00"}
@@ -44,7 +45,8 @@ class Appointment(BaseModel):
     id: int
     appointment_time: datetime
     status: str
-
+    doctor: Doctor
+    
     class Config:
         orm_mode = True
 
