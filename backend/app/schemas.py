@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from typing import List, Dict
+from datetime import datetime
 
 class UserBase(BaseModel):
     name: str
@@ -25,3 +27,30 @@ class User(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class Doctor(BaseModel):
+    name: str
+    available_days: List[str]  # e.g., ["Monday", "Wednesday", "Friday"]
+    working_hours: Dict[str, str]  # e.g., {"start": "09:00", "end": "17:00"}
+
+    class Config:
+        orm_mode = True
+
+
+class DoctorCreate(Doctor):
+    pass
+
+class Appointment(BaseModel):
+    id: int
+    appointment_time: datetime
+    status: str
+
+    class Config:
+        orm_mode = True
+
+
+class AppointmentCreate(Appointment):
+    patient_id: int
+    doctor_id: int
+
+
