@@ -3,73 +3,22 @@ import { useState, useEffect } from 'react';
 import { Appointment, Props } from '@/types'
 
 const Appointments: React.FC<Props> = ({ doctors }) => {
-    const [appointments, setAppointments] = useState<Appointment[]>([
-      {
-        id: '1',
-        doctorName: 'Dr. Sarah Johnson',
-        date: '2024-04-20',
-        time: '10:00 AM',
-        location: 'HealthEase Medical Center',
-        status: 'scheduled',
-      },
-      {
-        id: '2',
-        doctorName: 'Dr. Michael Chen',
-        date: '2024-04-25',
-        time: '2:30 PM',
-        location: 'Heart Care Clinic',
-        status: 'scheduled',
-      },
-      {
-        id: '3',
-        doctorName: 'Dr. Emily Rodriguez',
-        date: '2024-04-15',
-        time: '9:15 AM',
-        location: 'Diabetes Care Center',
-        status: 'scheduled',
-      },
-      {
-        id: '4',
-        doctorName: 'Dr. James Wilson',
-        date: '2024-03-10',
-        time: '11:30 AM',
-        location: 'HealthEase Medical Center',
-        status: 'completed',
-      },
-      {
-        id: '5',
-        doctorName: 'Dr. Lisa Wong',
-        date: '2024-03-05',
-        time: '3:45 PM',
-        location: 'Skin Health Clinic',
-        status: 'completed',
-      },
-      {
-        id: '6',
-        doctorName: 'Dr. Robert Smith',
-        date: '2024-04-18',
-        time: '1:00 PM',
-        location: 'Joint & Bone Center',
-        status: 'cancelled',
-      },
-    ]);
-  
+    const [appointments, setAppointments] = useState<any[]>([]);
+    const [shouldUpdateAppointments,setShouldUpdateAppointments] = useState(true)
     useEffect(() => {
       const fetchAppointments =async () =>{
-        const res = await fetch('http://localhost:8000/appointments/2', {
+        const res = await fetch('http://localhost:8000/appointments/3', {
             cache: 'no-store', // disables caching like getServerSideProps
           });
           if (!res.ok) throw new Error("Fecth failed");
           const data: Appointment[] = await res.json();
-          console.log(data)
+          setAppointments(data)
+          setShouldUpdateAppointments(false)
       }  
       fetchAppointments()
-      }, [])
+      }, [shouldUpdateAppointments])
     // State for modal visibility
     const [showModal, setShowModal] = useState(false);
-    const [selectedDoctor, setSelectedDoctor] =useState(0)
-    const [selectedDate, setSelectedDate] = useState("")
-    const [selectedTime, setSelectedTime] = useState("")
     const [availableTimeSlots, setAvailableTimeSlots] = useState([])
     // State for new appointment form
     const [newAppointment, setNewAppointment] = useState({
@@ -84,39 +33,49 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
       date: false,
       time: false,
     });
-  
+    async function deleteAppointment(id:string) {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/appointments/${id}`, {
+            method: 'DELETE',
+          });
+      
+          if (!res.ok) {
+            throw new Error('Failed to delete appointment');
+          }
+      
+          const data = await res.json(); 
+          console.log('Deleted:', data);
+        } catch (error) {
+          console.error((error as Error).message);
+        }
+      }
     const handleCancelAppointment = (id: string) => {
-      setAppointments(
-        appointments.map((apt) =>
-          apt.id === id ? { ...apt, status: 'cancelled' as const } : apt
-        )
-      );
+        deleteAppointment(id) 
+        setShouldUpdateAppointments(true)
+      /* setAppointments(
+        appointments.filter((apt) =>
+          apt.id !== id)) */
     };
     const fetchAvailableSlots = async(date:any)=>{
-        const res = await fetch(`http://localhost:8000/doctors/${selectedDoctor}/available_slots/?date=${date}`, {
+        const res = await fetch(`http://localhost:8000/doctors/${newAppointment.doctor}/available_slots/?date=${date}`, {
             cache: 'no-store', // disables caching like getServerSideProps
           });
           if (!res.ok) throw new Error("Fecth failed");
           const data: any = await res.json();
-          console.log(data)
+
           setAvailableTimeSlots(data.available_slots)
     }
     // Handler for input changes
-  
-    const handleDateChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => { 
-        setSelectedDate(e.target.value)
-
-        fetchAvailableSlots(e.target.value)
-    }
+    console.log(newAppointment.time)
     const handleInputChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
       const { name, value } = e.target;
-      
-        fetchAvailableSlots(selectedDate)
+      if(name==='date'){
+        fetchAvailableSlots(value)
+      }
+        
     
       setNewAppointment({
         ...newAppointment,
-        doctor: selectedDoctor.toString(),
-        date: selectedDate,
         [name]: value,
       });
       
@@ -130,7 +89,7 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
     };
     
     // Handler for form submission
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       
       // Validate form
@@ -139,28 +98,53 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
         date: !newAppointment.date,
         time: !newAppointment.time,
       };
-      
+      const localDateTime = new Date(`${newAppointment.date}T${newAppointment.time}:00`).toISOString()
+
+      const appointmentCreate: any = {
+        appointment_time:localDateTime,
+        status: 'scheduled',
+        patient_id: 3,
+        doctor_id: newAppointment.doctor,
+        
+      };
       if (errors.doctor || errors.date || errors.time) {
         setFormErrors(errors);
         return;
-      }
+      }  else {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/appointments/`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+              /*   Authorization: `Bearer ${token}`, */} ,
+              body: JSON.stringify(appointmentCreate)
+            });
+        
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            setShouldUpdateAppointments(true)
+          } catch (error) {
+            console.error('Error:', error);
+          } 
+      } 
       
       // Create new appointment
-      const selectedDoctor = doctors.find(doc => doc.name === newAppointment.doctor);
-      
-      if (!selectedDoctor) return;
+      const selectedDoctor = doctors.find(doc => doc.id=== Number(newAppointment.doctor));
+      console.log(selectedDoctor)
+      /* if (!selectedDoctor) return;
       
       const appointment: Appointment = {
         id: String(Date.now()),
         doctorName: selectedDoctor.name,
-        date: selectedDate,
-        time: selectedTime,
+        date: newAppointment.date,
+        time: newAppointment.time,
         location: selectedDoctor.location,
         status: 'scheduled',
       };
-      console.log(appointment)
+      
       // Add to appointments list
-      setAppointments([appointment, ...appointments]);
+      setAppointments([appointment, ...appointments]); */
       
       // Reset form and close modal
       setNewAppointment({
@@ -215,15 +199,15 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
                     <select
                       id="doctor"
                       name="doctor"
-                      value={selectedDoctor}
-                      onChange={(e) => setSelectedDoctor(Number(e.target.value))}
+                      value={newAppointment.doctor}
+                      onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                         formErrors.doctor ? 'border-red-500 dark:border-red-500' : ''
                       }`}
                     >
                       <option value="">Select a doctor</option>
                       {doctors.map((doctor) => (
-                        <option key={doctor.id} value={doctor.id}>
+                        <option key={doctor.name} value={doctor.id}>
                           {doctor.name}
                         </option>
                       ))}
@@ -242,8 +226,8 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
                       id="date"
                       name="date"
                       min={new Date().toISOString().split('T')[0]}
-                      value={selectedDate}
-                      onChange={handleDateChange}
+                      value={newAppointment.date}
+                      onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                         formErrors.date ? 'border-red-500 dark:border-red-500' : ''
                       }`}
@@ -260,8 +244,8 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
                     <select
                       id="time"
                       name="time"
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
+                      value={newAppointment.time}
+                      onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                         formErrors.time ? 'border-red-500 dark:border-red-500' : ''
                       }`}
@@ -300,7 +284,10 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
         )}
   
         <div className="mt-8 space-y-6">
-          {appointments.map((appointment) => (
+          {appointments.map((appointment) => {
+          const [date, time] = appointment?.appointment_time?.split("T") || []
+          console.log(appointment?.id)
+          return (
             <div
                 key={appointment.id}
                 className={`bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden ${
@@ -314,50 +301,32 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
                   <div className="flex items-center">
                     <div className="ml-4">
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                        {appointment.doctorName}
+                        {appointment.doctor?.name}
                       </h3>
                     </div>
                   </div>
                   <div className="hidden md:block">
-                    {appointment.status === 'scheduled' && (
                       <span data-testid="appointment-status" className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                         Upcoming
                       </span>
-                    )}
-                    {appointment.status === 'completed' && (
-                      <span data-testid="appointment-status" className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        Completed
-                      </span>
-                    )}
-                    {appointment.status === 'cancelled' && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                        Cancelled
-                      </span>
-                    )}
                   </div>
                 </div>
   
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex items-center">
                     <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                      {appointment.date}
+                      {date}
                     </span>
                   </div>
                   <div className="flex items-center">
                     <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                      {appointment.time}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                      {appointment.location}
+                      {time}
                     </span>
                   </div>
                 </div>
   
                 <div className="mt-6 flex justify-end space-x-4">
-                  {appointment.status === 'scheduled' && (
-                    <>
+                  
                       <button
                         data-testid="cancel-appointment"
                         onClick={() => handleCancelAppointment(appointment.id)}
@@ -365,25 +334,12 @@ const Appointments: React.FC<Props> = ({ doctors }) => {
                       >
                         Cancel
                       </button>
-                      <button
-                        className="btn-primary"
-                      >
-                        Reschedule
-                      </button>
-                    </>
-                  )}
-                  {appointment.status === 'completed' && (
-                    <button className="btn-secondary">
-                      Book Follow-up
-                    </button>
-                  )}
-                  <button className="text-primary-600 hover:text-primary-500 font-medium text-sm">
-                    View Details
-                  </button>
+                      
                 </div>
               </div>
             </div>
-          ))}
+          )
+        })}
         </div>
       </div>
     );

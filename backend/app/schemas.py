@@ -46,13 +46,18 @@ class Appointment(BaseModel):
     appointment_time: datetime
     status: str
     doctor: Doctor
-    
+
     class Config:
         orm_mode = True
 
 
-class AppointmentCreate(Appointment):
+class AppointmentCreate(BaseModel):
+    appointment_time: datetime
+    status: str
     patient_id: int
     doctor_id: int
+
+    class Config:
+        orm_mode = True
 
 
