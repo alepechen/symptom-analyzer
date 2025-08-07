@@ -1,1 +1,1 @@
-Full stack app built with FastAPI an Next.js for a machine learning-driven symptom recognition system.
+An AI-powered full-stack healthcare application that delivers instant symptom analysis and streamlined doctor appointment scheduling. Built using FastAPI, Next.js, Tailwind CSS, and a Hugging Face model.<img width="771" height="546" alt="Screenshot 2025-08-07 at 4 15 19 PM" src="https://github.com/user-attachments/assets/9e821668-99ab-4450-82b6-e36681683cb2" />
