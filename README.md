@@ -1,10 +1,8 @@
-AI-powered full-stack healthcare app that analyzes symptoms instantly and helps you book a relevant doctor in under 2 minutes.
+AI-powered full-stack healthcare app that analyzes symptoms and helps book a relevant doctor.
 
-⏱️ Reduce time from confusion to action from hours to seconds
+🧠 Integrated Hugging Face symptom analysis model for medical insights
 
-🧠 Integrated Hugging Face symptom analysis model for fast medical insights
-
-🗓️ Smart appointment scheduling system with real-time doctor availability
+🗓️ Appointment scheduling system with doctor availability
 
 🔐 Secure JWT-based authorization and user authentication
 
